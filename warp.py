@@ -48,8 +48,8 @@ print("=" * 42)
 
 os.system(f"sudo mkdir /root/warp-confs 2>/dev/null")
 # Ask user if they want to clean everything first
-cleanup = input("Do you want to remove all existing configs and proxies? (y/n): ").strip().lower()
 fix_dns()
+cleanup = input("Do you want to remove all existing configs and proxies? (y/n): ").strip().lower()
 if cleanup == 'y':
     print("Cleaning up previous configurations...")
     for i in range(1, 13):
