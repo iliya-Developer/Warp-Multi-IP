@@ -74,8 +74,8 @@ if not Path("/usr/local/bin/wgcf").exists():
     print("Installing wgcf...")
     os.system("curl -fsSL git.io/wgcf.sh | sudo bash")
 
-os.makedirs("~/warp-confs", exist_ok=True)
-os.chdir(os.path.expanduser("~/warp-confs"))
+os.makedirs("/root/warp-confs", exist_ok=True)
+os.chdir(os.path.expanduser("/root/warp-confs"))
 
 print("Generating 5 WARP configs...")
 for i in range(1, 6):
