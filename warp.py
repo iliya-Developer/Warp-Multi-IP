@@ -34,7 +34,6 @@ def handle_exit(sig, frame):
     sys.exit(0)
 
 signal.signal(signal.SIGINT, handle_exit)
-fix_dns()
 
 
 # -----------------------------
@@ -50,6 +49,7 @@ print("=" * 42)
 os.system(f"sudo mkdir /root/warp-confs 2>/dev/null")
 # Ask user if they want to clean everything first
 cleanup = input("Do you want to remove all existing configs and proxies? (y/n): ").strip().lower()
+fix_dns()
 if cleanup == 'y':
     print("Cleaning up previous configurations...")
     for i in range(1, 13):
