@@ -1,14 +1,12 @@
 cd ~
 
-if [ ! -f warp.py ]; then
-    echo "warp.py not found — downloading..."
-    sudo wget -O warp.py https://raw.githubusercontent.com/iliya-Developer/Warp-Multi-IP/refs/heads/main/warp.py
-else
-    echo "warp.py already exists."
-fi
+[ -f warp.py ] && rm -f warp.py
+
+echo "Downloading latest warp.py..."
+sudo wget -O warp.py https://raw.githubusercontent.com/iliya-Developer/Warp-Multi-IP/refs/heads/main/warp.py
 
 if [ ! -s warp.py ]; then
-    echo "warp.py is empty or corrupted — re-downloading..."
+    echo "Download failed or file is empty — retrying..."
     sudo wget -O warp.py https://raw.githubusercontent.com/iliya-Developer/Warp-Multi-IP/refs/heads/main/warp.py
 fi
 
