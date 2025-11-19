@@ -2,81 +2,150 @@ import os
 import subprocess
 import time
 from pathlib import Path
+import signal
+import sys
+
+
+def run(cmd):
+    """Run shell command safely with error handling."""
+    result = os.system(cmd)
+    if result != 0:
+        print(f"❌ ERROR: Command failed → {cmd}")
+    return result
+
+
+def check_cmd(cmd):
+    """Run command and return output or None if fails."""
+    try:
+        return subprocess.check_output(cmd, shell=True).decode().strip()
+    except:
+        return None
+
+
+def fix_dns():
+    print("\n🔧 Checking DNS...")
+    
+    print("Checking internet connection...")
+    if os.system("ping -c 1 8.8.8.8 > /dev/null 2>&1") != 0:
+        print("❌ No internet connection. Fix your network first.")
+        sys.exit(1)
+
+    print("Checking DNS resolution...")
+    if os.system("ping -c 1 google.com > /dev/null 2>&1") != 0:
+        print("⚠ DNS is broken → Fixing automatically...")
+
+        run('bash -c \'echo "nameserver 4.2.2.4" > /etc/resolv.conf\'')
+        run('bash -c \'echo "nameserver 8.8.8.8" >> /etc/resolv.conf\'')
+
+        print("🔄 Retesting DNS...")
+        if os.system("ping -c 1 google.com > /dev/null 2>&1") != 0:
+            print("❌ DNS failed even after fixing. Stop and fix manually.")
+            sys.exit(1)
+
+        print("✅ DNS has been fixed.")
+    else:
+        print("✅ DNS is OK!")
+
+def handle_exit(sig, frame):
+    print("\n\n🛑 CTRL+C detected — exiting safely.\n")
+    sys.exit(0)
+
+signal.signal(signal.SIGINT, handle_exit)
+
+
+# -----------------------------
+# START SCRIPT
+# -----------------------------
 
 os.system('clear')
 print("=" * 42)
-print("Created by Parsa in OPIran club https://t.me/OPIranClub")
-print("Love Iran :)")
+print("Created by Parsa in OPIran club")
+print("Love Iran ❤️")
 print("=" * 42)
 
-BASE_DIR = "/root/warp-confs"
-os.makedirs(BASE_DIR, exist_ok=True)
+# Fix DNS at start
+fix_dns()
 
-# Ask user if they want to clean everything first
+BASE_DIR = "/root/warp-confs"
+run(f"mkdir -p {BASE_DIR}")
+
+# Cleanup prompt
 cleanup = input("Do you want to remove all existing configs and proxies? (y/n): ").strip().lower()
 if cleanup == 'y':
-    print("Cleaning up previous configurations...")
+    print("🧹 Cleaning old configs...")
     for i in range(1, 13):
-        os.system(f"systemctl stop danted-warp{i} 2>/dev/null")
-        os.system(f"systemctl disable danted-warp{i} 2>/dev/null")
-        os.system(f"rm -f /etc/systemd/system/danted-warp{i}.service")
-        os.system(f"rm -f /etc/danted-multi/danted-warp{i}.conf")
-        os.system(f"wg-quick down wgcf{i} 2>/dev/null || ip link delete wgcf{i} 2>/dev/null")
-        os.system(f"rm -f /etc/wireguard/wgcf{i}.conf")
-        os.system(f"rm -rf {BASE_DIR}/warp{i}")
+        run(f"systemctl stop danted-warp{i}")
+        run(f"systemctl disable danted-warp{i}")
+        run(f"rm -f /etc/systemd/system/danted-warp{i}.service")
+        run(f"rm -f /etc/danted-multi/danted-warp{i}.conf")
+        run(f"wg-quick down wgcf{i} || ip link delete wgcf{i}")
+        run(f"rm -f /etc/wireguard/wgcf{i}.conf")
+        run(f"rm -rf {BASE_DIR}/warp{i}")
 
-    os.system("systemctl daemon-reload")
-    print("Cleanup completed. Continuing with fresh setup...\n")
+    run("systemctl daemon-reload")
+    print("✅ Cleanup done.\n")
 
-print("Installing WireGuard and required packages...")
-os.system("apt update")
-os.system("apt install -y wireguard resolvconf curl jq dante-server unzip")
+
+print("📦 Installing dependencies...")
+run("apt update -y")
+run("apt install -y wireguard resolvconf curl jq dante-server unzip wget")
+
+# Install wgcf if missing
+if not Path("/usr/local/bin/wgcf").exists():
+    print("⬇ Installing wgcf...")
+    run("wget https://github.com/ViRb3/wgcf/releases/latest/download/wgcf_2.2.20_linux_amd64 -O /usr/local/bin/wgcf")
+    run("chmod +x /usr/local/bin/wgcf")
 
 if not Path("/usr/local/bin/wgcf").exists():
-    print("Installing wgcf...")
-    os.system("curl -fsSL git.io/wgcf.sh | bash")
-    os.system("mv wgcf /usr/local/bin/")
+    print("❌ wgcf installation FAILED. Stop.")
+    sys.exit(1)
 
 os.chdir(BASE_DIR)
 
-print("Generating 5 WARP configs...")
+print("⚙ Generating WARP configs...")
 for i in range(1, 6):
     conf_path = f"/etc/wireguard/wgcf{i}.conf"
-    if Path(conf_path).exists():
-        print(f"  Config wgcf{i}.conf already exists, skipping.")
-        continue
 
     folder = f"{BASE_DIR}/warp{i}"
-    os.makedirs(folder, exist_ok=True)
+    run(f"mkdir -p {folder}")
     os.chdir(folder)
 
     if Path("wgcf-account.toml").exists():
         os.remove("wgcf-account.toml")
 
-    os.system("wgcf register --accept-tos > /dev/null")
-    os.system("wgcf generate")
-    os.system(f"cp wgcf-profile.conf {conf_path}")
+    print(f"➡ Registering WARP{i}...")
+    if run("wgcf register --accept-tos > /dev/null") != 0:
+        print("❌ wgcf register failed. Skipping.")
+        continue
 
-    ip_addr = f"172.16.0.{i+1}"
-    table_id = 51820 + i
+    run("wgcf generate")
 
-    os.system(f"sed -i 's|Address = .*|Address = {ip_addr}/32|' {conf_path}")
-    os.system(
-        f"sed -i '/\\[Interface\\]/a Table = {table_id}\\n"
-        f"PostUp = ip rule add from {ip_addr}/32 table {table_id}\\n"
-        f"PostDown = ip rule del from {ip_addr}/32 table {table_id}' {conf_path}"
+    if not Path("wgcf-profile.conf").exists():
+        print("❌ wgcf-profile.conf missing! Aborting.")
+        sys.exit(1)
+
+    run(f"cp wgcf-profile.conf {conf_path}")
+
+    ip = f"172.16.0.{i+1}"
+    table = 51820 + i
+
+    run(f"sed -i 's|Address = .*|Address = {ip}/32|' {conf_path}")
+    run(
+        f"sed -i '/\\[Interface\\]/a Table = {table}\\n"
+        f"PostUp = ip rule add from {ip}/32 table {table}\\n"
+        f"PostDown = ip rule del from {ip}/32 table {table}' {conf_path}"
     )
 
-print("Reloading WireGuard interfaces...")
-os.system("systemctl daemon-reload")
-os.system("modprobe wireguard")
+print("🔄 Reloading systemd & WireGuard...")
+run("systemctl daemon-reload")
+run("modprobe wireguard")
 
-print("Bringing up interfaces...")
+print("🚀 Starting WireGuard tunnels...")
 for i in range(1, 6):
-    os.system(f"systemctl enable --now wg-quick@wgcf{i}")
+    run(f"systemctl enable --now wg-quick@wgcf{i}")
 
-print("Setting up Dante SOCKS proxies...")
-os.makedirs("/etc/danted-multi", exist_ok=True)
+print("🧱 Creating Dante configs...")
+run("mkdir -p /etc/danted-multi")
 
 for i in range(1, 6):
     port = 1080 + i
@@ -97,8 +166,7 @@ socks pass {{ from: 0.0.0.0/0 to: 0.0.0.0/0 }}
 """
         )
 
-    service_file = f"/etc/systemd/system/danted-warp{i}.service"
-    with open(service_file, "w") as f:
+    with open(f"/etc/systemd/system/danted-warp{i}.service", "w") as f:
         f.write(
             f"""[Unit]
 Description=Dante SOCKS proxy warp{i}
@@ -115,13 +183,13 @@ WantedBy=multi-user.target
 """
         )
 
-print("Reloading systemd services...")
-os.system("systemctl daemon-reload")
+run("systemctl daemon-reload")
 
+print("\n🚀 Starting Dante proxies...")
 for i in range(1, 6):
-    os.system(f"systemctl enable --now danted-warp{i}")
+    run(f"systemctl enable --now danted-warp{i}")
 
-print("Done. All 5 WARP proxies are running and persistent after reboot!")
-print("\nSOCKS5 proxies:")
+print("\n🎉 ALL DONE! SOCKS5 proxies are ready:")
+
 for i in range(1, 6):
     print(f"  wgcf{i} → 127.0.0.1:{1080+i}")
