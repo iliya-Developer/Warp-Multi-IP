@@ -47,8 +47,8 @@ print("Love Iran :)")
 print("=" * 42)
 
 os.system(f"sudo mkdir /root/warp-confs 2>/dev/null")
-# Ask user if they want to clean everything first
 fix_dns()
+# Ask user if they want to clean everything first
 cleanup = input("Do you want to remove all existing configs and proxies? (y/n): ").strip().lower()
 if cleanup == 'y':
     print("Cleaning up previous configurations...")
@@ -77,7 +77,7 @@ if not Path("/usr/local/bin/wgcf").exists():
 os.makedirs("~/warp-confs", exist_ok=True)
 os.chdir(os.path.expanduser("~/warp-confs"))
 
-print("Generating 8 WARP configs...")
+print("Generating 5 WARP configs...")
 for i in range(1, 6):
     conf_path = f"/etc/wireguard/wgcf{i}.conf"
     if Path(conf_path).exists():
@@ -178,7 +178,7 @@ while not all_unique:
     if not all_unique:
         choice = input("Some IPs are not unique. Do you want to try again? (y/n): ").strip().lower()
         if choice != 'y':
-            print("Returning only proxies with unique IPs:")
+            print("\nSOCKS5 proxies (with unique public IPs):")
             for i in range(1, 6):
                 ip = proxy_ips[i]
                 if ip_map[ip] == 1 and ip != "error":
@@ -191,7 +191,3 @@ while not all_unique:
         print("Waiting 30 seconds before retry...")
         time.sleep(30)
         os.system("sudo modprobe -r wireguard || true")
-
-print("\nSOCKS5 proxies (with unique public IPs):")
-for i in range(1, 6):
-    print(f"  wgcf{i} → 127.0.0.1:{1080 + i}")
