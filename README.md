@@ -5,8 +5,3 @@ A script for create several warp config
 ```
 bash <(curl -Ls https://raw.githubusercontent.com/iliya-Developer/Warp-Multi-IP/main/script.sh)
 ```
-
-**دستور اجرای اسکریپت(شل)**:
-```
-bash <(curl -Ls https://raw.githubusercontent.com/iliya-Developer/Warp-Multi-IP/main/warp.sh)
-```
