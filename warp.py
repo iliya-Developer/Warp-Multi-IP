@@ -132,7 +132,8 @@ socks pass {{ from: 0.0.0.0/0 to: 0.0.0.0/0 }}
     with open(service_file, "w") as f:
         f.write(f"""[Unit]
 Description=Dante SOCKS proxy warp{i}
-After=network.target
+After=network-online.target wg-quick@wgcf1.service
+Wants=wg-quick@wgcf1.service
 
 [Service]
 Type=simple
